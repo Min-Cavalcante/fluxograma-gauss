@@ -1,6 +1,46 @@
 /* ============================================================
    Gauss Energia - Flowchart App Styles
    ============================================================ */
+/* ============================================================
+   ACTIONS PANEL - FIX SCROLL
+   ============================================================ */
+.actions-panel {
+  position: absolute;
+  top: 80px;
+  right: 24px;
+  width: 280px;
+  max-height: calc(100vh - 120px); /* FIX: altura máxima */
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: slideInRight 0.25s ease;
+  overflow-y: auto; /* FIX: adicionar scroll */
+  overflow-x: hidden;
+}
+
+/* Scrollbar para o painel de ações */
+.actions-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.actions-panel::-webkit-scrollbar-track {
+  background: var(--bg-sunken);
+  border-radius: 3px;
+}
+
+.actions-panel::-webkit-scrollbar-thumb {
+  background: var(--ink-300);
+  border-radius: 3px;
+}
+
+.actions-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-400);
+}
+
+/* ... resto do CSS permanece igual ... */
+
 
 * {
   margin: 0;

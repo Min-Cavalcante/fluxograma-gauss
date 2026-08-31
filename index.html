@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gauss Energia - Fluxograma Pós-Venda</title>
+  <link rel="stylesheet" href="./colors_and_type.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  
+  <!-- Modal de Login -->
+  <div id="loginModal" class="modal">
+    <div class="modal-content">
+      <div class="login-header">
+        <div class="gauss-wordmark lg" style="color: var(--gauss-green);">GAUSS</div>
+        <p class="body-sm" style="margin-top: 8px;">Fluxograma Pós-Venda</p>
+      </div>
+      <div class="login-body">
+        <label class="eyebrow" for="userName">Identifique-se</label>
+        <input 
+          type="text" 
+          id="userName" 
+          placeholder="Seu nome"
+          autocomplete="name"
+        />
+        <button id="loginBtn" class="btn-primary">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="gauss-wordmark md" style="color: var(--gauss-green);">GAUSS</div>
+      <span class="header-divider"></span>
+      <h4 style="margin: 0; font-weight: 600;">Fluxograma Pós-Venda</h4>
+    </div>
+    
+    <div class="header-center">
+      <div class="toolbar">
+        <button class="tool-btn" data-tool="select" title="Selecionar (V)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 3L3 17L8.5 12.5L11 17L13 16L10.5 11.5L17 9L3 3Z"/>
+          </svg>
+        </button>
+        <button class="tool-btn" data-tool="process" title="Processo">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="5" width="14" height="10" rx="2"/>
+          </svg>
+        </button>
+        <button class="tool-btn" data-tool="decision" title="Decisão">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 3L17 10L10 17L3 10Z"/>
+          </svg>
+        </button>
+        <button class="tool-btn" data-tool="start" title="Início/Fim">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="6" width="14" height="8" rx="4"/>
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <button class="tool-btn" data-action="connect" title="Conectar (C)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10L10 10M10 10L17 10M10 10L10 3M10 10L10 17"/>
+          </svg>
+        </button>
+        <button class="tool-btn" data-action="delete" title="Deletar (Del)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 7L6 17H14L15 7M8 7V5H12V7M3 7H17"/>
+          </svg>
+        </button>
+        <div class="toolbar-divider"></div>
+        <button class="tool-btn" data-action="zoom-in" title="Zoom In (+)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="9" r="5"/>
+            <path d="M13 13L17 17M9 7V11M7 9H11"/>
+          </svg>
+        </button>
+        <button class="tool-btn" data-action="zoom-out" title="Zoom Out (-)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="9" r="5"/>
+            <path d="M13 13L17 17M7 9H11"/>
+          </svg>
+        </button>
+        <button class="tool-btn" data-action="fit" title="Ajustar (0)">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="14" height="14" rx="1"/>
+            <path d="M7 7L13 13M13 7L7 13"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="user-avatars" id="userAvatars"></div>
+      <div class="user-info">
+        <span class="eyebrow" style="color: var(--fg-3);">Você</span>
+        <span class="user-name" id="currentUserName"></span>
+      </div>
+      <button class="btn-secondary" id="logoutBtn">Sair</button>
+    </div>
+  </header>
+
+  <!-- Canvas Container -->
+  <main class="canvas-container" id="canvasContainer">
+    <svg id="mainCanvas" class="flowchart-canvas">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <polygon points="0 0, 10 3, 0 6" fill="var(--ink-600)" />
+        </marker>
+        <filter id="shadow">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+        </filter>
+      </defs>
+      <g id="connectionsLayer"></g>
+      <g id="nodesLayer"></g>
+      <g id="cursorsLayer"></g>
+    </svg>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu" style="display: none;">
+      <button class="context-item" data-action="edit">
+        <span>Editar texto</span>
+        <kbd>Enter</kbd>
+      </button>
+      <button class="context-item" data-action="add-after">
+        <span>Adicionar após</span>
+      </button>
+      <button class="context-item" data-action="add-before">
+        <span>Adicionar antes</span>
+      </button>
+      <hr>
+      <button class="context-item" data-action="collapse">
+        <span>Colapsar grupo</span>
+      </button>
+      <button class="context-item" data-action="change-color">
+        <span>Mudar cor</span>
+      </button>
+      <hr>
+      <button class="context-item danger" data-action="delete">
+        <span>Deletar</span>
+        <kbd>Del</kbd>
+      </button>
+    </div>
+
+    <!-- Minimap -->
+    <div class="minimap" id="minimap">
+      <div class="minimap-label eyebrow">Mapa</div>
+      <canvas id="minimapCanvas" width="200" height="150"></canvas>
+      <div class="minimap-viewport" id="minimapViewport"></div>
+    </div>
+
+    <!-- Zoom indicator -->
+    <div class="zoom-indicator" id="zoomIndicator">100%</div>
+  </main>
+
+  <!-- Floating Action Button - Help -->
+  <button class="fab" id="helpBtn" title="Atalhos">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01"/>
+    </svg>
+  </button>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Atalhos do Teclado</h3>
+        <button class="modal-close" id="closeHelp">&times;</button>
+      </div>
+      <div class="shortcuts-grid">
+        <div class="shortcut"><kbd>V</kbd> <span>Modo Seleção</span></div>
+        <div class="shortcut"><kbd>C</kbd> <span>Modo Conexão</span></div>
+        <div class="shortcut"><kbd>Del</kbd> <span>Deletar selecionado</span></div>
+        <div class="shortcut"><kbd>Enter</kbd> <span>Editar texto</span></div>
+        <div class="shortcut"><kbd>+</kbd> <span>Zoom in</span></div>
+        <div class="shortcut"><kbd>-</kbd> <span>Zoom out</span></div>
+        <div class="shortcut"><kbd>0</kbd> <span>Ajustar zoom</span></div>
+        <div class="shortcut"><kbd>Space + Drag</kbd> <span>Mover canvas</span></div>
+        <div class="shortcut"><kbd>Ctrl/Cmd + S</kbd> <span>Salvar</span></div>
+        <div class="shortcut"><kbd>Ctrl/Cmd + Z</kbd> <span>Desfazer</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

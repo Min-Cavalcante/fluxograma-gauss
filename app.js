@@ -1,6 +1,6 @@
 // ============================================================
 // Gauss Energia - Collaborative Flowchart App
-// With Pinning, Attachments, and Comments
+// FIXED: Collapse button, page reload, and scrolling
 // ============================================================
 
 class FlowchartApp {
@@ -21,7 +21,7 @@ class FlowchartApp {
     this.transform = { x: 0, y: 0, scale: 1 };
     this.history = [];
     this.historyIndex = -1;
-    this.version = 3; // Schema version (increased for new features)
+    this.version = 3;
     
     // DOM elements
     this.svg = document.getElementById('mainCanvas');
@@ -62,10 +62,15 @@ class FlowchartApp {
     
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
-      this.currentUser = JSON.parse(savedUser);
-      loginModal.style.display = 'none';
-      this.updateUserUI();
-      this.announcePresence();
+      try {
+        this.currentUser = JSON.parse(savedUser);
+        loginModal.style.display = 'none';
+        this.updateUserUI();
+        this.announcePresence();
+      } catch (e) {
+        localStorage.removeItem('currentUser');
+        loginModal.style.display = 'flex';
+      }
     }
     
     loginBtn.addEventListener('click', () => this.handleLogin());
@@ -318,25 +323,6 @@ class FlowchartApp {
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       this.zoom(delta, e.clientX, e.clientY);
     });
-    
-    // Comment tooltip on hover
-    this.svg.addEventListener('mouseover', (e) => {
-      const nodeEl = e.target.closest('.flowchart-node');
-      if (nodeEl) {
-        const nodeId = nodeEl.dataset.nodeId;
-        const node = this.nodes.find(n => n.id === nodeId);
-        if (node && node.comments && node.comments.length > 0) {
-          this.showCommentTooltip(node, e);
-        }
-      }
-    });
-    
-    this.svg.addEventListener('mouseout', (e) => {
-      const nodeEl = e.target.closest('.flowchart-node');
-      if (nodeEl) {
-        this.hideCommentTooltip();
-      }
-    });
   }
   
   setupKeyboardShortcuts() {
@@ -500,6 +486,7 @@ class FlowchartApp {
     this.actionsPanel.style.display = 'block';
     
     // Update collapse button
+    const collapseBtn = document.getElementById('collapseBtn');
     const collapseText = document.getElementById('collapseText');
     const descendants = this.getAllDescendants(this.selectedNode);
     
@@ -508,9 +495,9 @@ class FlowchartApp {
       collapseText.textContent = isCollapsed 
         ? `Expandir (${descendants.length} itens)` 
         : `Colapsar (${descendants.length} itens)`;
-      document.getElementById('collapseBtn').style.display = 'flex';
+      collapseBtn.style.display = 'flex';
     } else {
-      document.getElementById('collapseBtn').style.display = 'none';
+      collapseBtn.style.display = 'none';
     }
     
     // Update pin button
@@ -678,6 +665,7 @@ class FlowchartApp {
     this.showActionsPanel();
     this.render();
     this.broadcastChange();
+    this.addToHistory();
     this.showNotification(node.pinned ? '📌 Cartão fixado' : 'Cartão desafixado');
   }
   
@@ -708,8 +696,10 @@ class FlowchartApp {
   toggleNodeCollapse(node) {
     node.collapsed = !node.collapsed;
     this.showActionsPanel();
+    this.addToHistory();
     this.render();
     this.broadcastChange();
+    this.saveToStorage();
   }
   
   isNodeVisible(node) {
@@ -791,9 +781,6 @@ class FlowchartApp {
     if (!this.selectedNode || !files.length) return;
     
     Array.from(files).forEach(file => {
-      // In a real app, you'd upload to a server and get a URL
-      // For now, we'll store file metadata and use FileReader for preview
-      
       const attachment = {
         id: this.generateId(),
         name: file.name,
@@ -803,7 +790,6 @@ class FlowchartApp {
         uploadedAt: new Date().toISOString()
       };
       
-      // Convert to base64 for storage (only for small files/images)
       if (file.type.startsWith('image/') && file.size < 1024 * 1024) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -816,7 +802,6 @@ class FlowchartApp {
         };
         reader.readAsDataURL(file);
       } else {
-        // For larger files, just store metadata
         attachment.dataUrl = null;
         this.selectedNode.attachments.push(attachment);
         this.updateAttachmentsUI();
@@ -855,13 +840,13 @@ class FlowchartApp {
         </div>
         <div class="attachment-actions">
           ${attachment.dataUrl ? `
-            <button class="attachment-action" onclick="window.open('${attachment.dataUrl}')" title="Abrir">
+            <button class="attachment-action" title="Abrir">
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M10 3v6m0 0v6m0-6h6m-6 0H4"/>
               </svg>
             </button>
           ` : ''}
-          <button class="attachment-action delete" data-attachment-id="${attachment.id}" title="Remover">
+          <button class="attachment-action delete" title="Remover">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M6 6l8 8M14 6l-8 8"/>
             </svg>
@@ -869,7 +854,13 @@ class FlowchartApp {
         </div>
       `;
       
-      // Add delete listener
+      // Add listeners after creating element
+      if (attachment.dataUrl) {
+        item.querySelector('.attachment-action:not(.delete)').addEventListener('click', () => {
+          window.open(attachment.dataUrl);
+        });
+      }
+      
       item.querySelector('.delete').addEventListener('click', () => {
         this.deleteAttachment(attachment.id);
       });
@@ -987,11 +978,10 @@ class FlowchartApp {
         </div>
         <div class="comment-body">${this.escapeHtml(comment.text)}</div>
         <div class="comment-actions">
-          <button class="comment-action-btn delete" data-comment-id="${comment.id}">Deletar</button>
+          <button class="comment-action-btn delete">Deletar</button>
         </div>
       `;
       
-      // Delete listener
       item.querySelector('.delete').addEventListener('click', () => {
         this.deleteComment(comment.id);
       });
@@ -1023,26 +1013,6 @@ class FlowchartApp {
     }
   }
   
-  showCommentTooltip(node, event) {
-    if (!node.comments || node.comments.length === 0) return;
-    
-    const tooltip = this.commentTooltip;
-    const latestComment = node.comments[node.comments.length - 1];
-    
-    tooltip.innerHTML = `
-      <div class="comment-tooltip-author">${latestComment.author}</div>
-      <div class="comment-tooltip-body">${this.escapeHtml(latestComment.text)}</div>
-    `;
-    
-    tooltip.style.display = 'block';
-    tooltip.style.left = `${event.clientX}px`;
-    tooltip.style.top = `${event.clientY + 20}px`;
-  }
-  
-  hideCommentTooltip() {
-    this.commentTooltip.style.display = 'none';
-  }
-  
   getTimeAgo(date) {
     const seconds = Math.floor((new Date() - date) / 1000);
     
@@ -1061,7 +1031,7 @@ class FlowchartApp {
   }
   
   // ============================================================
-  // RENDERING
+  // RENDERING (FIX: Proper event listener attachment)
   // ============================================================
   render() {
     this.renderConnections();
@@ -1114,7 +1084,7 @@ class FlowchartApp {
         g.appendChild(pin);
       }
       
-      // Comment indicator (triangle top-right)
+      // Comment indicator
       if (node.comments && node.comments.length > 0) {
         const commentIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         commentIndicator.setAttribute('d', `M ${node.width/2 - 16} ${-node.height/2} L ${node.width/2} ${-node.height/2} L ${node.width/2} ${-node.height/2 + 16} Z`);
@@ -1122,7 +1092,7 @@ class FlowchartApp {
         g.appendChild(commentIndicator);
       }
       
-      // Attachment count badge
+      // Attachment badge
       if (node.attachments && node.attachments.length > 0) {
         const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         badge.innerHTML = `
@@ -1135,25 +1105,30 @@ class FlowchartApp {
         g.appendChild(badge);
       }
       
-      // Collapse button
+      // Collapse button (FIX: Proper event listener)
       const descendants = this.getAllDescendants(node);
       if (descendants.length > 0) {
         const collapseBtn = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         collapseBtn.classList.add('node-collapse-btn');
+        collapseBtn.style.cursor = 'pointer';
         collapseBtn.innerHTML = `
           <circle cx="${node.width/2 - 12}" cy="${-node.height/2 + 12}" r="10" 
                   fill="${node.collapsed ? 'var(--gauss-green)' : 'var(--ink-600)'}" 
                   stroke="white" stroke-width="2"/>
           <text x="${node.width/2 - 12}" y="${-node.height/2 + 16}" 
-                text-anchor="middle" fill="white" font-size="14" font-weight="bold">
+                text-anchor="middle" fill="white" font-size="14" font-weight="bold" 
+                pointer-events="none">
             ${node.collapsed ? '+' : '−'}
           </text>
         `;
-        collapseBtn.style.cursor = 'pointer';
+        
+        // FIX: Attach event listener to the group element
         collapseBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          e.preventDefault();
           this.toggleNodeCollapse(node);
         });
+        
         g.appendChild(collapseBtn);
         
         // Collapsed count badge
@@ -1242,7 +1217,7 @@ class FlowchartApp {
     const startY = -(lines.length - 1) * lineHeight / 2;
     
     return lines.map((line, i) => 
-      `<tspan x="0" dy="${i === 0 ? startY : lineHeight}">${line}</tspan>`
+      `<tspan x="0" dy="${i === 0 ? startY : lineHeight}">${this.escapeHtml(line)}</tspan>`
     ).join('');
   }
   
@@ -1357,16 +1332,21 @@ class FlowchartApp {
   }
   
   // ============================================================
-  // PERSISTENCE (WITH MIGRATION)
+  // PERSISTENCE (FIX: Better validation and error handling)
   // ============================================================
   saveToStorage() {
-    const data = {
-      version: this.version,
-      nodes: this.nodes,
-      connections: this.connections,
-      transform: this.transform
-    };
-    localStorage.setItem('gauss_flowchart_data', JSON.stringify(data));
+    try {
+      const data = {
+        version: this.version,
+        nodes: this.nodes,
+        connections: this.connections,
+        transform: this.transform
+      };
+      localStorage.setItem('gauss_flowchart_data', JSON.stringify(data));
+    } catch (e) {
+      console.error('Erro ao salvar:', e);
+      this.showNotification('❌ Erro ao salvar dados');
+    }
   }
   
   loadFromStorage() {
@@ -1376,23 +1356,35 @@ class FlowchartApp {
       if (saved) {
         const data = JSON.parse(saved);
         
+        // Validate basic structure
+        if (!data.nodes || !Array.isArray(data.nodes)) {
+          throw new Error('Dados corrompidos');
+        }
+        
         // Migrate if needed
         if (!data.version || data.version < this.version) {
           console.log('📦 Migrando dados...');
           this.migrateData(data);
         } else {
-          this.nodes = data.nodes || [];
+          this.nodes = data.nodes;
           this.connections = data.connections || [];
           this.transform = data.transform || { x: 0, y: 0, scale: 1 };
         }
         
-        // Ensure all nodes have new properties
+        // Ensure all nodes have required properties
         this.nodes = this.nodes.map(node => ({
-          ...node,
+          id: node.id || this.generateId(),
+          type: node.type || 'process',
+          x: node.x || 0,
+          y: node.y || 0,
+          width: node.width || 160,
+          height: node.height || 80,
+          text: node.text || 'Sem título',
+          color: node.color || '#FFFFFF',
+          collapsed: node.collapsed || false,
           pinned: node.pinned || false,
           attachments: node.attachments || [],
-          comments: node.comments || [],
-          collapsed: node.collapsed || false
+          comments: node.comments || []
         }));
         
         this.applyTransform();
@@ -1409,36 +1401,58 @@ class FlowchartApp {
   }
   
   migrateData(data) {
-    this.nodes = (data.nodes || []).map(node => {
-      const { children, ...rest } = node;
-      return {
-        ...rest,
-        collapsed: rest.collapsed || false,
-        pinned: rest.pinned || false,
-        attachments: rest.attachments || [],
-        comments: rest.comments || []
-      };
-    });
-    
-    this.connections = data.connections || [];
-    this.transform = data.transform || { x: 0, y: 0, scale: 1 };
-    
-    this.showNotification('✅ Dados atualizados!');
+    try {
+      this.nodes = (data.nodes || []).map(node => {
+        const { children, ...rest } = node;
+        return {
+          id: rest.id || this.generateId(),
+          type: rest.type || 'process',
+          x: rest.x || 0,
+          y: rest.y || 0,
+          width: rest.width || 160,
+          height: rest.height || 80,
+          text: rest.text || 'Sem título',
+          color: rest.color || '#FFFFFF',
+          collapsed: rest.collapsed || false,
+          pinned: rest.pinned || false,
+          attachments: rest.attachments || [],
+          comments: rest.comments || []
+        };
+      });
+      
+      this.connections = data.connections || [];
+      this.transform = data.transform || { x: 0, y: 0, scale: 1 };
+      
+      this.showNotification('✅ Dados atualizados!');
+    } catch (e) {
+      console.error('Erro na migração:', e);
+      this.createDemoFlowchart();
+    }
   }
   
   showErrorModal() {
     const confirmed = confirm(
-      '⚠️ Erro ao carregar dados.\n\nDeseja limpar o cache?'
+      '⚠️ Erro ao carregar dados salvos.\n\n' +
+      'Os dados podem estar corrompidos.\n\n' +
+      'Deseja limpar o cache e recomeçar?\n\n' +
+      '(Clique OK para limpar, ou Cancelar para criar um backup)'
     );
     
     if (confirmed) {
       this.clearAllData();
       location.reload();
+    } else {
+      // Try to save backup
+      const backup = localStorage.getItem('gauss_flowchart_data');
+      console.log('BACKUP DOS DADOS:', backup);
+      alert('Os dados foram impressos no console (F12 → Console). Copie e guarde como backup.');
+      this.createDemoFlowchart();
     }
   }
   
   clearAllData() {
     localStorage.removeItem('gauss_flowchart_data');
+    this.showNotification('🗑️ Cache limpo!');
   }
   
   createDemoFlowchart() {

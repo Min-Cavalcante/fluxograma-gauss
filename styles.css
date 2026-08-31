@@ -1,0 +1,688 @@
+/* ============================================================
+   Gauss Energia - Flowchart App Styles
+   ============================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-body);
+  background: var(--bg-paper);
+  color: var(--fg-1);
+}
+
+/* ============================================================
+   MODAL & LOGIN
+   ============================================================ */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(7, 16, 10, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-7);
+  min-width: 420px;
+  max-width: 90vw;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.login-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.login-body label {
+  margin-bottom: var(--space-1);
+}
+
+.login-body input {
+  padding: 12px 16px;
+  border: 1.5px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  transition: all 0.2s ease;
+  background: var(--bg-surface);
+  color: var(--fg-1);
+}
+
+.login-body input:focus {
+  outline: none;
+  border-color: var(--gauss-green);
+  box-shadow: var(--shadow-glow-green);
+}
+
+.btn-primary, .btn-secondary {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: var(--gauss-green);
+  color: white;
+  margin-top: var(--space-3);
+}
+
+.btn-primary:hover {
+  background: var(--gauss-green-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--fg-2);
+  border: 1px solid var(--border-hairline);
+  padding: 8px 16px;
+  font-size: var(--fs-sm);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-sunken);
+  border-color: var(--ink-300);
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.app-header {
+  height: 64px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  gap: var(--space-5);
+  box-shadow: var(--shadow-xs);
+  position: relative;
+  z-index: 100;
+}
+
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.header-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-hairline);
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+}
+
+.tool-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-2);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.tool-btn:hover {
+  background: var(--bg-surface);
+  color: var(--fg-1);
+}
+
+.tool-btn.active {
+  background: var(--gauss-green);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-hairline);
+  margin: 0 4px;
+}
+
+/* ============================================================
+   USER AVATARS (Collaborative)
+   ============================================================ */
+.user-avatars {
+  display: flex;
+  gap: 8px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  color: white;
+  border: 2px solid var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.user-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  background: var(--gauss-green);
+  border: 2px solid var(--bg-surface);
+  border-radius: 50%;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--fg-1);
+}
+
+/* ============================================================
+   CANVAS CONTAINER
+   ============================================================ */
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+  background: 
+    linear-gradient(90deg, var(--ink-200) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(var(--ink-200) 1px, transparent 1px) 0 0 / 20px 20px,
+    var(--bg-paper);
+  cursor: default;
+}
+
+.flowchart-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.canvas-container.panning {
+  cursor: grab;
+}
+
+.canvas-container.panning:active {
+  cursor: grabbing;
+}
+
+/* ============================================================
+   FLOWCHART NODES
+   ============================================================ */
+.flowchart-node {
+  cursor: move;
+  user-select: none;
+  transition: filter 0.15s ease;
+}
+
+.flowchart-node:hover {
+  filter: brightness(1.05);
+}
+
+.flowchart-node.selected .node-shape {
+  stroke: var(--gauss-green);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 0 rgba(57, 181, 74, 0.3));
+}
+
+.flowchart-node.collapsed {
+  opacity: 0.6;
+}
+
+.flowchart-node.collapsed .node-shape {
+  stroke-dasharray: 4 2;
+}
+
+.node-shape {
+  fill: var(--bg-surface);
+  stroke: var(--ink-300);
+  stroke-width: 1.5;
+  transition: all 0.2s ease;
+}
+
+.node-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  fill: var(--fg-1);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.node-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.node-collapse-btn {
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.flowchart-node:hover .node-collapse-btn {
+  opacity: 1;
+}
+
+/* ============================================================
+   CONNECTIONS
+   ============================================================ */
+.connection-line {
+  fill: none;
+  stroke: var(--ink-400);
+  stroke-width: 2;
+  marker-end: url(#arrowhead);
+  transition: stroke 0.2s ease;
+}
+
+.connection-line:hover,
+.connection-line.selected {
+  stroke: var(--gauss-green);
+  stroke-width: 2.5;
+}
+
+.connection-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--fg-2);
+  background: var(--bg-paper);
+  padding: 2px 6px;
+}
+
+/* ============================================================
+   CONTEXT MENU
+   ============================================================ */
+.context-menu {
+  position: fixed;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  min-width: 200px;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+.context-item {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--fg-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.15s ease;
+}
+
+.context-item:hover {
+  background: var(--bg-sunken);
+}
+
+.context-item.danger {
+  color: var(--signal-warn);
+}
+
+.context-item kbd {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.context-menu hr {
+  margin: 4px 0;
+  border: none;
+  border-top: 1px solid var(--border-hairline);
+}
+
+/* ============================================================
+   MINIMAP
+   ============================================================ */
+.minimap {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 220px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+}
+
+.minimap-label {
+  margin-bottom: 8px;
+  display: block;
+}
+
+#minimapCanvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+
+.minimap-viewport {
+  position: absolute;
+  border: 2px solid var(--gauss-green);
+  background: rgba(57, 181, 74, 0.1);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+/* ============================================================
+   ZOOM INDICATOR
+   ============================================================ */
+.zoom-indicator {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--fg-2);
+  box-shadow: var(--shadow-sm);
+  z-index: 50;
+}
+
+/* ============================================================
+   FAB (Floating Action Button)
+   ============================================================ */
+.fab {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gauss-green);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 50;
+}
+
+.fab:hover {
+  background: var(--gauss-green-700);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 8px 24px rgba(57, 181, 74, 0.4);
+}
+
+.fab:active {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   HELP MODAL
+   ============================================================ */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-5);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: var(--fg-3);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+  background: var(--bg-sunken);
+  color: var(--fg-1);
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.shortcut kbd {
+  min-width: 60px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.shortcut span {
+  font-size: var(--fs-sm);
+  color: var(--fg-2);
+}
+
+/* ============================================================
+   CURSORS (Collaborative)
+   ============================================================ */
+.remote-cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9998;
+  transition: transform 0.1s ease-out;
+}
+
+.remote-cursor svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.remote-cursor .cursor-label {
+  position: absolute;
+  top: 20px;
+  left: 12px;
+  background: rgba(7, 16, 10, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================================
+   RESPONSIVENESS
+   ============================================================ */
+@media (max-width: 1024px) {
+  .app-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: var(--space-3);
+  }
+  
+  .header-center {
+    order: 3;
+    width: 100%;
+    margin-top: var(--space-3);
+  }
+  
+  .toolbar {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .minimap {
+    width: 160px;
+    bottom: 16px;
+    right: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-content {
+    min-width: 90vw;
+    padding: var(--space-5);
+  }
+  
+  .shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .user-avatars {
+    display: none;
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.hidden {
+  display: none !important;
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 6px;
+  background: var(--ink-100);
+  border: 1px solid var(--border-hairline);
+  border-radius: 4px;
+  box-shadow: 0 1px 0 var(--ink-300);
+}
+
+/* Selection rectangle */
+.selection-rect {
+  fill: rgba(57, 181, 74, 0.1);
+  stroke: var(--gauss-green);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 2;
+  pointer-events: none;
+}
+
+/* Editable text input overlay */
+.node-text-input {
+  position: absolute;
+  padding: 8px 12px;
+  border: 2px solid var(--gauss-green);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  background: var(--bg-surface);
+  color: var(--fg-1);
+  text-align: center;
+  box-shadow: var(--shadow-glow-green);
+  outline: none;
+  z-index: 200;
+}

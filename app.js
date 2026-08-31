@@ -20,6 +20,7 @@ class FlowchartApp {
     this.transform = { x: 0, y: 0, scale: 1 };
     this.history = [];
     this.historyIndex = -1;
+    this.version = 2; // Schema version
     
     // DOM elements
     this.svg = document.getElementById('mainCanvas');
@@ -457,7 +458,6 @@ class FlowchartApp {
     
     this.actionsPanel.style.display = 'block';
     
-    // Update collapse button text
     const collapseText = document.getElementById('collapseText');
     const descendants = this.getAllDescendants(this.selectedNode);
     
@@ -558,7 +558,6 @@ class FlowchartApp {
   
   deleteSelected() {
     if (this.selectedNode) {
-      // Delete node and all its connections
       this.nodes = this.nodes.filter(n => n.id !== this.selectedNode.id);
       this.connections = this.connections.filter(c => 
         c.from !== this.selectedNode.id && c.to !== this.selectedNode.id
@@ -631,13 +630,12 @@ class FlowchartApp {
   
   toggleNodeCollapse(node) {
     node.collapsed = !node.collapsed;
-    this.showActionsPanel(); // Update button text
+    this.showActionsPanel();
     this.render();
     this.broadcastChange();
   }
   
   isNodeVisible(node) {
-    // Check if any ancestor is collapsed
     const parents = this.connections
       .filter(c => c.to === node.id)
       .map(c => this.nodes.find(n => n.id === c.from))
@@ -712,7 +710,6 @@ class FlowchartApp {
     this.nodesLayer.innerHTML = '';
     
     this.nodes.forEach(node => {
-      // Skip if not visible (ancestor is collapsed)
       if (!this.isNodeVisible(node)) return;
       
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -723,7 +720,6 @@ class FlowchartApp {
       
       g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
       
-      // Shape
       let shape;
       if (node.type === 'decision') {
         shape = `<path class="node-shape" d="M 0,-${node.height/2} L ${node.width/2},0 L 0,${node.height/2} L -${node.width/2},0 Z" fill="${node.color}" />`;
@@ -735,7 +731,6 @@ class FlowchartApp {
       
       g.innerHTML = shape;
       
-      // Text
       const text = this.createWrappedText(node.text, node.width - 20);
       const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       textEl.classList.add('node-text');
@@ -743,7 +738,6 @@ class FlowchartApp {
       textEl.innerHTML = text;
       g.appendChild(textEl);
       
-      // Collapse indicator
       const descendants = this.getAllDescendants(node);
       if (descendants.length > 0) {
         const collapseBtn = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -764,7 +758,6 @@ class FlowchartApp {
         });
         g.appendChild(collapseBtn);
         
-        // Badge showing count
         if (node.collapsed) {
           const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           badge.innerHTML = `
@@ -791,8 +784,6 @@ class FlowchartApp {
       const toNode = this.nodes.find(n => n.id === conn.to);
       
       if (!fromNode || !toNode) return;
-      
-      // Hide connection if either node is not visible
       if (!this.isNodeVisible(fromNode) || !this.isNodeVisible(toNode)) return;
       
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -967,10 +958,11 @@ class FlowchartApp {
   }
   
   // ============================================================
-  // PERSISTENCE
+  // PERSISTENCE (COM MIGRAÇÃO AUTOMÁTICA)
   // ============================================================
   saveToStorage() {
     const data = {
+      version: this.version,
       nodes: this.nodes,
       connections: this.connections,
       transform: this.transform
@@ -979,16 +971,76 @@ class FlowchartApp {
   }
   
   loadFromStorage() {
-    const saved = localStorage.getItem('gauss_flowchart_data');
-    if (saved) {
-      const data = JSON.parse(saved);
-      this.nodes = data.nodes || [];
-      this.connections = data.connections || [];
-      this.transform = data.transform || { x: 0, y: 0, scale: 1 };
-      this.applyTransform();
-    } else {
-      this.createDemoFlowchart();
+    try {
+      const saved = localStorage.getItem('gauss_flowchart_data');
+      
+      if (saved) {
+        const data = JSON.parse(saved);
+        
+        // Check version and migrate if needed
+        if (!data.version || data.version < this.version) {
+          console.log('📦 Migrando dados da versão antiga...');
+          this.migrateData(data);
+        } else {
+          this.nodes = data.nodes || [];
+          this.connections = data.connections || [];
+          this.transform = data.transform || { x: 0, y: 0, scale: 1 };
+        }
+        
+        // Clean up old properties
+        this.nodes = this.nodes.map(node => {
+          const { children, ...cleanNode } = node;
+          return {
+            ...cleanNode,
+            collapsed: cleanNode.collapsed || false
+          };
+        });
+        
+        this.applyTransform();
+        this.saveToStorage(); // Save migrated data
+        
+      } else {
+        this.createDemoFlowchart();
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados:', error);
+      this.showErrorModal();
     }
+  }
+  
+  migrateData(data) {
+    // Migrate from old format
+    this.nodes = (data.nodes || []).map(node => {
+      const { children, ...rest } = node;
+      return {
+        ...rest,
+        collapsed: rest.collapsed || false
+      };
+    });
+    
+    this.connections = data.connections || [];
+    this.transform = data.transform || { x: 0, y: 0, scale: 1 };
+    
+    this.showNotification('✅ Dados atualizados com sucesso!');
+  }
+  
+  showErrorModal() {
+    const confirmed = confirm(
+      '⚠️ Erro ao carregar dados salvos.\n\n' +
+      'Deseja limpar o cache e recomeçar?\n\n' +
+      '(Clique OK para limpar, ou Cancelar para tentar novamente)'
+    );
+    
+    if (confirmed) {
+      this.clearAllData();
+      location.reload();
+    }
+  }
+  
+  clearAllData() {
+    localStorage.removeItem('gauss_flowchart_data');
+    this.showNotification('🗑️ Cache limpo!');
   }
   
   createDemoFlowchart() {

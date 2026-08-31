@@ -1,5 +1,6 @@
 // ============================================================
 // Gauss Energia - Collaborative Flowchart App
+// With Pinning, Attachments, and Comments
 // ============================================================
 
 class FlowchartApp {
@@ -20,7 +21,7 @@ class FlowchartApp {
     this.transform = { x: 0, y: 0, scale: 1 };
     this.history = [];
     this.historyIndex = -1;
-    this.version = 2; // Schema version
+    this.version = 3; // Schema version (increased for new features)
     
     // DOM elements
     this.svg = document.getElementById('mainCanvas');
@@ -29,6 +30,7 @@ class FlowchartApp {
     this.cursorsLayer = document.getElementById('cursorsLayer');
     this.canvasContainer = document.getElementById('canvasContainer');
     this.actionsPanel = document.getElementById('actionsPanel');
+    this.commentTooltip = document.getElementById('commentTooltip');
     
     // Color palette for users
     this.userColors = [
@@ -281,6 +283,26 @@ class FlowchartApp {
       });
     });
     
+    // File upload
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      this.handleFileUpload(e.target.files);
+    });
+    
+    // Comments
+    document.getElementById('addCommentBtn').addEventListener('click', () => {
+      this.addComment();
+    });
+    
+    document.getElementById('commentInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        this.addComment();
+      }
+    });
+    
+    document.getElementById('closeComments').addEventListener('click', () => {
+      document.getElementById('commentsSection').style.display = 'none';
+    });
+    
     // Help
     document.getElementById('helpBtn').addEventListener('click', () => {
       document.getElementById('helpModal').style.display = 'flex';
@@ -295,6 +317,25 @@ class FlowchartApp {
       e.preventDefault();
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
       this.zoom(delta, e.clientX, e.clientY);
+    });
+    
+    // Comment tooltip on hover
+    this.svg.addEventListener('mouseover', (e) => {
+      const nodeEl = e.target.closest('.flowchart-node');
+      if (nodeEl) {
+        const nodeId = nodeEl.dataset.nodeId;
+        const node = this.nodes.find(n => n.id === nodeId);
+        if (node && node.comments && node.comments.length > 0) {
+          this.showCommentTooltip(node, e);
+        }
+      }
+    });
+    
+    this.svg.addEventListener('mouseout', (e) => {
+      const nodeEl = e.target.closest('.flowchart-node');
+      if (nodeEl) {
+        this.hideCommentTooltip();
+      }
     });
   }
   
@@ -458,6 +499,7 @@ class FlowchartApp {
     
     this.actionsPanel.style.display = 'block';
     
+    // Update collapse button
     const collapseText = document.getElementById('collapseText');
     const descendants = this.getAllDescendants(this.selectedNode);
     
@@ -470,10 +512,22 @@ class FlowchartApp {
     } else {
       document.getElementById('collapseBtn').style.display = 'none';
     }
+    
+    // Update pin button
+    const pinText = document.getElementById('pinText');
+    pinText.textContent = this.selectedNode.pinned ? 'Desafixar cartão' : 'Fixar cartão';
+    
+    // Update attachments section
+    this.updateAttachmentsUI();
+    
+    // Update comments
+    this.updateCommentsCount();
   }
   
   hideActionsPanel() {
     this.actionsPanel.style.display = 'none';
+    document.getElementById('commentsSection').style.display = 'none';
+    document.getElementById('attachmentsSection').style.display = 'none';
   }
   
   handlePanelAction(action) {
@@ -489,11 +543,20 @@ class FlowchartApp {
       case 'add-before':
         this.addNodeBefore(this.selectedNode);
         break;
+      case 'pin':
+        this.toggleNodePin(this.selectedNode);
+        break;
       case 'collapse':
         this.toggleNodeCollapse(this.selectedNode);
         break;
       case 'change-color':
         this.changeNodeColor(this.selectedNode);
+        break;
+      case 'attach':
+        document.getElementById('fileInput').click();
+        break;
+      case 'comment':
+        this.openCommentsSection();
         break;
       case 'delete':
         this.deleteSelected();
@@ -515,7 +578,10 @@ class FlowchartApp {
       height: type === 'start' ? 60 : 80,
       text: `Novo ${type === 'process' ? 'Processo' : type === 'decision' ? 'Decisão' : 'Início'}`,
       color: this.getNodeColor(type),
-      collapsed: false
+      collapsed: false,
+      pinned: false,
+      attachments: [],
+      comments: []
     };
     
     this.nodes.push(node);
@@ -605,6 +671,17 @@ class FlowchartApp {
   }
   
   // ============================================================
+  // PIN FUNCTIONALITY
+  // ============================================================
+  toggleNodePin(node) {
+    node.pinned = !node.pinned;
+    this.showActionsPanel();
+    this.render();
+    this.broadcastChange();
+    this.showNotification(node.pinned ? '📌 Cartão fixado' : 'Cartão desafixado');
+  }
+  
+  // ============================================================
   // COLLAPSE/EXPAND WITH DESCENDANTS
   // ============================================================
   getAllDescendants(node) {
@@ -636,6 +713,10 @@ class FlowchartApp {
   }
   
   isNodeVisible(node) {
+    // Pinned nodes are always visible
+    if (node.pinned) return true;
+    
+    // Check if any ancestor is collapsed
     const parents = this.connections
       .filter(c => c.to === node.id)
       .map(c => this.nodes.find(n => n.id === c.from))
@@ -659,7 +740,10 @@ class FlowchartApp {
       height: 80,
       text: 'Novo Processo',
       color: '#FFFFFF',
-      collapsed: false
+      collapsed: false,
+      pinned: false,
+      attachments: [],
+      comments: []
     };
     
     this.nodes.push(newNode);
@@ -679,7 +763,10 @@ class FlowchartApp {
       height: 80,
       text: 'Novo Processo',
       color: '#FFFFFF',
-      collapsed: false
+      collapsed: false,
+      pinned: false,
+      attachments: [],
+      comments: []
     };
     
     this.nodes.push(newNode);
@@ -695,6 +782,282 @@ class FlowchartApp {
     node.color = colors[(currentIndex + 1) % colors.length];
     this.render();
     this.broadcastChange();
+  }
+  
+  // ============================================================
+  // FILE ATTACHMENTS
+  // ============================================================
+  handleFileUpload(files) {
+    if (!this.selectedNode || !files.length) return;
+    
+    Array.from(files).forEach(file => {
+      // In a real app, you'd upload to a server and get a URL
+      // For now, we'll store file metadata and use FileReader for preview
+      
+      const attachment = {
+        id: this.generateId(),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        uploadedBy: this.currentUser.name,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      // Convert to base64 for storage (only for small files/images)
+      if (file.type.startsWith('image/') && file.size < 1024 * 1024) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          attachment.dataUrl = e.target.result;
+          this.selectedNode.attachments.push(attachment);
+          this.updateAttachmentsUI();
+          this.render();
+          this.broadcastChange();
+          this.showNotification(`📎 ${file.name} anexado`);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For larger files, just store metadata
+        attachment.dataUrl = null;
+        this.selectedNode.attachments.push(attachment);
+        this.updateAttachmentsUI();
+        this.render();
+        this.broadcastChange();
+        this.showNotification(`📎 ${file.name} anexado`);
+      }
+    });
+  }
+  
+  updateAttachmentsUI() {
+    const section = document.getElementById('attachmentsSection');
+    const list = document.getElementById('attachmentsList');
+    
+    if (!this.selectedNode || !this.selectedNode.attachments || this.selectedNode.attachments.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+    
+    section.style.display = 'block';
+    list.innerHTML = '';
+    
+    this.selectedNode.attachments.forEach(attachment => {
+      const item = document.createElement('div');
+      item.className = 'attachment-item';
+      
+      const iconClass = this.getAttachmentIcon(attachment.type);
+      
+      item.innerHTML = `
+        <div class="attachment-icon ${iconClass}">
+          ${this.getAttachmentIconSVG(attachment.type)}
+        </div>
+        <div class="attachment-info">
+          <div class="attachment-name">${attachment.name}</div>
+          <div class="attachment-meta">${this.formatFileSize(attachment.size)} · ${attachment.uploadedBy}</div>
+        </div>
+        <div class="attachment-actions">
+          ${attachment.dataUrl ? `
+            <button class="attachment-action" onclick="window.open('${attachment.dataUrl}')" title="Abrir">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 3v6m0 0v6m0-6h6m-6 0H4"/>
+              </svg>
+            </button>
+          ` : ''}
+          <button class="attachment-action delete" data-attachment-id="${attachment.id}" title="Remover">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 6l8 8M14 6l-8 8"/>
+            </svg>
+          </button>
+        </div>
+      `;
+      
+      // Add delete listener
+      item.querySelector('.delete').addEventListener('click', () => {
+        this.deleteAttachment(attachment.id);
+      });
+      
+      list.appendChild(item);
+    });
+  }
+  
+  deleteAttachment(attachmentId) {
+    if (!this.selectedNode) return;
+    
+    this.selectedNode.attachments = this.selectedNode.attachments.filter(a => a.id !== attachmentId);
+    this.updateAttachmentsUI();
+    this.render();
+    this.broadcastChange();
+    this.showNotification('🗑️ Anexo removido');
+  }
+  
+  getAttachmentIcon(type) {
+    if (type.startsWith('image/')) return 'image';
+    if (type === 'application/pdf') return 'pdf';
+    return '';
+  }
+  
+  getAttachmentIconSVG(type) {
+    if (type.startsWith('image/')) {
+      return '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h14a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1zm2 3v8l4-3 4 3V6H5z"/></svg>';
+    }
+    if (type === 'application/pdf') {
+      return '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 2h8l4 4v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm8 0v4h4"/></svg>';
+    }
+    return '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 2h8l4 4v10a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2z"/></svg>';
+  }
+  
+  formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+  
+  // ============================================================
+  // COMMENTS
+  // ============================================================
+  openCommentsSection() {
+    const section = document.getElementById('commentsSection');
+    section.style.display = 'block';
+    this.updateCommentsList();
+    document.getElementById('commentInput').focus();
+  }
+  
+  addComment() {
+    if (!this.selectedNode) return;
+    
+    const input = document.getElementById('commentInput');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    const comment = {
+      id: this.generateId(),
+      author: this.currentUser.name,
+      authorColor: this.currentUser.color,
+      text: text,
+      timestamp: new Date().toISOString()
+    };
+    
+    if (!this.selectedNode.comments) {
+      this.selectedNode.comments = [];
+    }
+    
+    this.selectedNode.comments.push(comment);
+    input.value = '';
+    
+    this.updateCommentsList();
+    this.updateCommentsCount();
+    this.render();
+    this.broadcastChange();
+    this.showNotification('💬 Comentário adicionado');
+  }
+  
+  updateCommentsList() {
+    if (!this.selectedNode) return;
+    
+    const list = document.getElementById('commentsList');
+    list.innerHTML = '';
+    
+    if (!this.selectedNode.comments || this.selectedNode.comments.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M3 6a2 2 0 012-2h10a2 2 0 012 2v7a2 2 0 01-2 2H8l-3 3v-3H5a2 2 0 01-2-2V6z"/>
+          </svg>
+          <div class="empty-state-text">Nenhum comentário ainda.<br>Seja o primeiro a comentar!</div>
+        </div>
+      `;
+      return;
+    }
+    
+    this.selectedNode.comments.forEach(comment => {
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+      
+      const date = new Date(comment.timestamp);
+      const timeAgo = this.getTimeAgo(date);
+      
+      item.innerHTML = `
+        <div class="comment-header">
+          <div class="comment-author">
+            <div class="comment-avatar" style="background: ${comment.authorColor}">
+              ${comment.author.substring(0, 2).toUpperCase()}
+            </div>
+            <span class="comment-author-name">${comment.author}</span>
+          </div>
+          <span class="comment-date">${timeAgo}</span>
+        </div>
+        <div class="comment-body">${this.escapeHtml(comment.text)}</div>
+        <div class="comment-actions">
+          <button class="comment-action-btn delete" data-comment-id="${comment.id}">Deletar</button>
+        </div>
+      `;
+      
+      // Delete listener
+      item.querySelector('.delete').addEventListener('click', () => {
+        this.deleteComment(comment.id);
+      });
+      
+      list.appendChild(item);
+    });
+  }
+  
+  deleteComment(commentId) {
+    if (!this.selectedNode) return;
+    
+    this.selectedNode.comments = this.selectedNode.comments.filter(c => c.id !== commentId);
+    this.updateCommentsList();
+    this.updateCommentsCount();
+    this.render();
+    this.broadcastChange();
+    this.showNotification('🗑️ Comentário removido');
+  }
+  
+  updateCommentsCount() {
+    const count = this.selectedNode?.comments?.length || 0;
+    const badge = document.getElementById('commentCount');
+    
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  
+  showCommentTooltip(node, event) {
+    if (!node.comments || node.comments.length === 0) return;
+    
+    const tooltip = this.commentTooltip;
+    const latestComment = node.comments[node.comments.length - 1];
+    
+    tooltip.innerHTML = `
+      <div class="comment-tooltip-author">${latestComment.author}</div>
+      <div class="comment-tooltip-body">${this.escapeHtml(latestComment.text)}</div>
+    `;
+    
+    tooltip.style.display = 'block';
+    tooltip.style.left = `${event.clientX}px`;
+    tooltip.style.top = `${event.clientY + 20}px`;
+  }
+  
+  hideCommentTooltip() {
+    this.commentTooltip.style.display = 'none';
+  }
+  
+  getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    if (seconds < 60) return 'agora';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m atrás`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h atrás`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d atrás`;
+    
+    return date.toLocaleDateString('pt-BR');
+  }
+  
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
   
   // ============================================================
@@ -720,6 +1083,7 @@ class FlowchartApp {
       
       g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
       
+      // Shape
       let shape;
       if (node.type === 'decision') {
         shape = `<path class="node-shape" d="M 0,-${node.height/2} L ${node.width/2},0 L 0,${node.height/2} L -${node.width/2},0 Z" fill="${node.color}" />`;
@@ -731,6 +1095,7 @@ class FlowchartApp {
       
       g.innerHTML = shape;
       
+      // Text
       const text = this.createWrappedText(node.text, node.width - 20);
       const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       textEl.classList.add('node-text');
@@ -738,6 +1103,39 @@ class FlowchartApp {
       textEl.innerHTML = text;
       g.appendChild(textEl);
       
+      // Pin indicator
+      if (node.pinned) {
+        const pin = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        pin.innerHTML = `
+          <path class="node-pin-indicator" 
+                d="M ${-node.width/2 + 8} ${-node.height/2 + 6} l 2 -2 l 2 2 l 0 4 l 2 2 l 0 2 l -3 0 l 0 4 l -2 0 l 0 -4 l -3 0 l 0 -2 l 2 -2 Z"
+                transform="scale(0.8)"/>
+        `;
+        g.appendChild(pin);
+      }
+      
+      // Comment indicator (triangle top-right)
+      if (node.comments && node.comments.length > 0) {
+        const commentIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        commentIndicator.setAttribute('d', `M ${node.width/2 - 16} ${-node.height/2} L ${node.width/2} ${-node.height/2} L ${node.width/2} ${-node.height/2 + 16} Z`);
+        commentIndicator.setAttribute('fill', '#D9534F');
+        g.appendChild(commentIndicator);
+      }
+      
+      // Attachment count badge
+      if (node.attachments && node.attachments.length > 0) {
+        const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        badge.innerHTML = `
+          <circle cx="${-node.width/2 + 12}" cy="${node.height/2 - 12}" r="10" fill="var(--gauss-green)"/>
+          <text x="${-node.width/2 + 12}" y="${node.height/2 - 8}" 
+                text-anchor="middle" fill="white" font-size="10" font-weight="700">
+            ${node.attachments.length}
+          </text>
+        `;
+        g.appendChild(badge);
+      }
+      
+      // Collapse button
       const descendants = this.getAllDescendants(node);
       if (descendants.length > 0) {
         const collapseBtn = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -758,9 +1156,10 @@ class FlowchartApp {
         });
         g.appendChild(collapseBtn);
         
+        // Collapsed count badge
         if (node.collapsed) {
-          const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          badge.innerHTML = `
+          const countBadge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          countBadge.innerHTML = `
             <rect x="${node.width/2 - 30}" y="${node.height/2 - 10}" width="28" height="16" 
                   rx="8" fill="var(--gauss-green)"/>
             <text x="${node.width/2 - 16}" y="${node.height/2 - 2}" 
@@ -768,7 +1167,7 @@ class FlowchartApp {
               ${descendants.length}
             </text>
           `;
-          g.appendChild(badge);
+          g.appendChild(countBadge);
         }
       }
       
@@ -958,7 +1357,7 @@ class FlowchartApp {
   }
   
   // ============================================================
-  // PERSISTENCE (COM MIGRAÇÃO AUTOMÁTICA)
+  // PERSISTENCE (WITH MIGRATION)
   // ============================================================
   saveToStorage() {
     const data = {
@@ -977,9 +1376,9 @@ class FlowchartApp {
       if (saved) {
         const data = JSON.parse(saved);
         
-        // Check version and migrate if needed
+        // Migrate if needed
         if (!data.version || data.version < this.version) {
-          console.log('📦 Migrando dados da versão antiga...');
+          console.log('📦 Migrando dados...');
           this.migrateData(data);
         } else {
           this.nodes = data.nodes || [];
@@ -987,17 +1386,17 @@ class FlowchartApp {
           this.transform = data.transform || { x: 0, y: 0, scale: 1 };
         }
         
-        // Clean up old properties
-        this.nodes = this.nodes.map(node => {
-          const { children, ...cleanNode } = node;
-          return {
-            ...cleanNode,
-            collapsed: cleanNode.collapsed || false
-          };
-        });
+        // Ensure all nodes have new properties
+        this.nodes = this.nodes.map(node => ({
+          ...node,
+          pinned: node.pinned || false,
+          attachments: node.attachments || [],
+          comments: node.comments || [],
+          collapsed: node.collapsed || false
+        }));
         
         this.applyTransform();
-        this.saveToStorage(); // Save migrated data
+        this.saveToStorage();
         
       } else {
         this.createDemoFlowchart();
@@ -1010,26 +1409,26 @@ class FlowchartApp {
   }
   
   migrateData(data) {
-    // Migrate from old format
     this.nodes = (data.nodes || []).map(node => {
       const { children, ...rest } = node;
       return {
         ...rest,
-        collapsed: rest.collapsed || false
+        collapsed: rest.collapsed || false,
+        pinned: rest.pinned || false,
+        attachments: rest.attachments || [],
+        comments: rest.comments || []
       };
     });
     
     this.connections = data.connections || [];
     this.transform = data.transform || { x: 0, y: 0, scale: 1 };
     
-    this.showNotification('✅ Dados atualizados com sucesso!');
+    this.showNotification('✅ Dados atualizados!');
   }
   
   showErrorModal() {
     const confirmed = confirm(
-      '⚠️ Erro ao carregar dados salvos.\n\n' +
-      'Deseja limpar o cache e recomeçar?\n\n' +
-      '(Clique OK para limpar, ou Cancelar para tentar novamente)'
+      '⚠️ Erro ao carregar dados.\n\nDeseja limpar o cache?'
     );
     
     if (confirmed) {
@@ -1040,26 +1439,41 @@ class FlowchartApp {
   
   clearAllData() {
     localStorage.removeItem('gauss_flowchart_data');
-    this.showNotification('🗑️ Cache limpo!');
   }
   
   createDemoFlowchart() {
-    const n1 = { id: 'demo1', type: 'start', x: 400, y: 100, width: 160, height: 60, text: 'Início - Pós-Venda', color: '#E6F5EA', collapsed: false };
-    const n2 = { id: 'demo2', type: 'process', x: 400, y: 220, width: 180, height: 80, text: 'Receber solicitação', color: '#FFFFFF', collapsed: false };
-    const n3 = { id: 'demo3', type: 'decision', x: 400, y: 360, width: 140, height: 80, text: 'Urgente?', color: '#FFF9E6', collapsed: false };
-    const n4 = { id: 'demo4', type: 'process', x: 240, y: 480, width: 160, height: 80, text: 'Fila normal', color: '#FFFFFF', collapsed: false };
-    const n5 = { id: 'demo5', type: 'process', x: 560, y: 480, width: 160, height: 80, text: 'Priorizar', color: '#FFE6E6', collapsed: false };
-    const n6 = { id: 'demo6', type: 'process', x: 240, y: 600, width: 160, height: 80, text: 'Análise técnica', color: '#FFFFFF', collapsed: false };
-    const n7 = { id: 'demo7', type: 'process', x: 560, y: 600, width: 160, height: 80, text: 'Atendimento imediato', color: '#FFFFFF', collapsed: false };
+    const n1 = { 
+      id: 'demo1', type: 'start', x: 400, y: 100, width: 160, height: 60, 
+      text: 'Início - Pós-Venda', color: '#E6F5EA', collapsed: false, 
+      pinned: false, attachments: [], comments: [] 
+    };
+    const n2 = { 
+      id: 'demo2', type: 'process', x: 400, y: 220, width: 180, height: 80, 
+      text: 'Receber solicitação', color: '#FFFFFF', collapsed: false,
+      pinned: false, attachments: [], comments: [] 
+    };
+    const n3 = { 
+      id: 'demo3', type: 'decision', x: 400, y: 360, width: 140, height: 80, 
+      text: 'Urgente?', color: '#FFF9E6', collapsed: false,
+      pinned: false, attachments: [], comments: [] 
+    };
+    const n4 = { 
+      id: 'demo4', type: 'process', x: 240, y: 480, width: 160, height: 80, 
+      text: 'Fila normal', color: '#FFFFFF', collapsed: false,
+      pinned: false, attachments: [], comments: [] 
+    };
+    const n5 = { 
+      id: 'demo5', type: 'process', x: 560, y: 480, width: 160, height: 80, 
+      text: 'Priorizar', color: '#FFE6E6', collapsed: false,
+      pinned: false, attachments: [], comments: [] 
+    };
     
-    this.nodes = [n1, n2, n3, n4, n5, n6, n7];
+    this.nodes = [n1, n2, n3, n4, n5];
     this.connections = [
       { id: 'c1', from: 'demo1', to: 'demo2', label: '' },
       { id: 'c2', from: 'demo2', to: 'demo3', label: '' },
       { id: 'c3', from: 'demo3', to: 'demo4', label: 'Não' },
-      { id: 'c4', from: 'demo3', to: 'demo5', label: 'Sim' },
-      { id: 'c5', from: 'demo4', to: 'demo6', label: '' },
-      { id: 'c6', from: 'demo5', to: 'demo7', label: '' }
+      { id: 'c4', from: 'demo3', to: 'demo5', label: 'Sim' }
     ];
     
     this.saveToStorage();
@@ -1131,7 +1545,7 @@ class FlowchartApp {
       const nw = node.width * scale;
       const nh = node.height * scale;
       
-      ctx.fillStyle = '#39B54A';
+      ctx.fillStyle = node.pinned ? '#D9534F' : '#39B54A';
       ctx.fillRect(x - nw/2, y - nh/2, nw, nh);
     });
     

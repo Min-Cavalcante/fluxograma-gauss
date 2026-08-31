@@ -686,3 +686,165 @@ kbd {
   outline: none;
   z-index: 200;
 }
+
+/* ============================================================
+   ACTIONS PANEL (sidebar when node selected)
+   ============================================================ */
+.actions-panel {
+  position: absolute;
+  top: 80px;
+  right: 24px;
+  width: 280px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: slideInRight 0.25s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.panel-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--fg-3);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.panel-close:hover {
+  background: var(--bg-sunken);
+  color: var(--fg-1);
+}
+
+.actions-body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.action-btn {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--fg-1);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.action-btn svg {
+  flex-shrink: 0;
+  color: var(--fg-3);
+  transition: color 0.15s ease;
+}
+
+.action-btn span {
+  flex: 1;
+}
+
+.action-btn kbd {
+  font-size: 10px;
+  padding: 3px 6px;
+  margin-left: auto;
+}
+
+.action-btn:hover {
+  background: var(--bg-sunken);
+}
+
+.action-btn:hover svg {
+  color: var(--gauss-green);
+}
+
+.action-btn:active {
+  background: var(--ink-100);
+}
+
+.action-btn.danger {
+  color: var(--signal-warn);
+}
+
+.action-btn.danger:hover {
+  background: rgba(217, 83, 79, 0.08);
+}
+
+.action-btn.danger svg {
+  color: var(--signal-warn);
+}
+
+.action-divider {
+  height: 1px;
+  background: var(--border-hairline);
+  margin: var(--space-2) 0;
+}
+
+/* Update minimap position when panel is open */
+.minimap {
+  transition: bottom 0.3s ease;
+}
+
+.actions-panel ~ .minimap {
+  bottom: 24px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 1024px) {
+  .actions-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

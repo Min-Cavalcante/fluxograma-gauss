@@ -1,0 +1,322 @@
+/* ============================================================
+   Gauss Energia — Colors & Type
+   Modernized system. The only mandatory token is --gauss-green
+   (#39B54A — sampled from the top stripe of the legacy logo).
+   ============================================================ */
+
+/* -------- Web fonts -------- */
+/* Sora Regular (400) and Medium (500) fall back to Google Fonts —
+   replace with self-hosted @font-face when TTFs are supplied. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500&family=JetBrains+Mono:wght@400;500;600;700;800&family=Bebas+Neue&display=swap');
+
+@font-face { font-family: 'Sora'; font-weight: 100; font-style: normal; font-display: swap; src: url('./fonts/Sora-Thin.ttf') format('truetype'); }
+@font-face { font-family: 'Sora'; font-weight: 200; font-style: normal; font-display: swap; src: url('./fonts/Sora-ExtraLight.ttf') format('truetype'); }
+@font-face { font-family: 'Sora'; font-weight: 300; font-style: normal; font-display: swap; src: url('./fonts/Sora-Light.ttf') format('truetype'); }
+@font-face { font-family: 'Sora'; font-weight: 600; font-style: normal; font-display: swap; src: url('./fonts/Sora-SemiBold.ttf') format('truetype'); }
+@font-face { font-family: 'Sora'; font-weight: 700; font-style: normal; font-display: swap; src: url('./fonts/Sora-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'Sora'; font-weight: 800; font-style: normal; font-display: swap; src: url('./fonts/Sora-ExtraBold.ttf') format('truetype'); }
+
+:root {
+  /* ---- Brand: signature green (MANDATORY) ---- */
+  --gauss-green: #39B54A;
+  --gauss-green-100: #E6F5EA;
+  --gauss-green-300: #8FD79A;
+  --gauss-green-700: #2A8D38;
+  --gauss-green-900: #1B5D24;
+
+  /* ---- Ink scale (neutrals with a faint 1° green undertone) ---- */
+  --white:   #FFFFFF;
+  --ink-50:  #F8FAF8;
+  --ink-100: #F1F3F1;
+  --ink-200: #E2E5E2;
+  --ink-300: #C2C7C3;
+  --ink-400: #969C97;
+  --ink-500: #6B736E;
+  --ink-600: #475149;
+  --ink-700: #2A332E;
+  --ink-800: #1A241E;
+  --ink-900: #0E1812;
+  --ink-1000: #07100A;
+
+  /* ---- Functional signals (data viz only) ---- */
+  --signal-solar: #F2B441;
+  --signal-grid:  #2B6CFF;
+  --signal-warn:  #D9534F;
+  --signal-ok:    var(--gauss-green);
+
+  /* ---- Semantic aliases ---- */
+  --fg-1: var(--ink-900);
+  --fg-2: var(--ink-700);
+  --fg-3: var(--ink-500);
+  --fg-inverse: var(--white);
+
+  --bg-paper:   var(--ink-50);
+  --bg-surface: var(--white);
+  --bg-sunken:  var(--ink-100);
+  --bg-hero:    var(--ink-1000);
+
+  --border-hairline: var(--ink-200);
+  --border-strong:   var(--ink-900);
+  --border-accent:   var(--gauss-green);
+
+  --accent: var(--gauss-green);
+  --accent-fg: var(--ink-1000);
+
+  /* ---- Elevation ---- */
+  --shadow-xs: 0 1px 0 rgba(7,16,10,0.04);
+  --shadow-sm: 0 1px 2px rgba(7,16,10,0.06), 0 1px 1px rgba(7,16,10,0.04);
+  --shadow-md: 0 6px 16px -4px rgba(7,16,10,0.10), 0 2px 4px rgba(7,16,10,0.04);
+  --shadow-lg: 0 24px 48px -12px rgba(7,16,10,0.18);
+  --shadow-glow-green: 0 0 0 4px rgba(57,181,74,0.18);
+
+  /* ---- Radii ---- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* ---- Spacing (4 px base) ---- */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px; --space-5: 24px;
+  --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px; --space-10: 128px;
+
+  /* ---- Type tokens ---- */
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-body:    'Sora', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-wordmark:'Bebas Neue', 'Sora', system-ui, sans-serif; /* GAUSS wordmark ONLY */
+
+  --fs-d1: clamp(56px, 7.2vw, 112px); /* @kind font */
+  --fs-d2: clamp(40px, 5.0vw, 72px); /* @kind font */
+  --fs-d3: 48px;
+  --fs-h1: 36px;
+  --fs-h2: 28px;
+  --fs-h3: 22px;
+  --fs-h4: 18px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 12px;
+  --fs-label: 11px;
+
+  --lh-display: 0.98; /* @kind font */
+  --lh-heading: 1.12; /* @kind font */
+  --lh-body: 1.55; /* @kind font */
+
+  --tracking-tight: -0.02em;
+  --tracking-snug:  -0.01em;
+  --tracking-wide:   0.08em;
+  --tracking-label:  0.14em;
+}
+
+/* ============================================================
+   ELEMENT BASELINE
+   Note: h1–h6 do NOT pin a color, so `.slide.dark { color: white }`
+   and any local override inherits cleanly.
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--fg-1);
+  background: var(--bg-paper);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  margin: 0 0 var(--space-4);
+  text-wrap: balance;
+  /* color: inherit — never pinned, so dark surfaces work */
+}
+
+.display-1, .h-display-1 {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: var(--fs-d1); line-height: var(--lh-display);
+  letter-spacing: var(--tracking-tight);
+}
+.display-2, .h-display-2 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: var(--fs-d2); line-height: var(--lh-display);
+  letter-spacing: var(--tracking-tight);
+}
+h1, .h1 { font-weight: 700; font-size: var(--fs-h1); line-height: var(--lh-heading); letter-spacing: var(--tracking-snug); }
+h2, .h2 { font-weight: 700; font-size: var(--fs-h2); line-height: var(--lh-heading); letter-spacing: var(--tracking-snug); }
+h3, .h3 { font-weight: 600; font-size: var(--fs-h3); line-height: var(--lh-heading); }
+h4, .h4 { font-weight: 600; font-size: var(--fs-h4); line-height: var(--lh-heading); }
+
+p, .body { margin: 0 0 var(--space-4); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--fg-2); text-wrap: pretty; }
+.body-sm { font-size: var(--fs-sm); line-height: 1.5; color: var(--fg-2); }
+.body-xs { font-size: var(--fs-xs); line-height: 1.45; color: var(--fg-3); }
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; transition: color .15s ease; }
+a:hover { color: var(--gauss-green-700); }
+
+small { font-size: var(--fs-sm); color: var(--fg-3); }
+
+code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+}
+
+hr { border: 0; border-top: 1px solid var(--border-hairline); margin: var(--space-6) 0; }
+
+/* Eyebrow / technical-readout label */
+.eyebrow, .label-tech {
+  font-family: var(--font-display);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.eyebrow--accent { color: var(--gauss-green-900); }
+
+.readout {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--tracking-snug);
+}
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   WORDMARK — Bebas Neue, letter-spaced. Use this ONLY for the
+   literal text "GAUSS" in lockups. Body and headings stay Sora.
+   ============================================================ */
+.gauss-wordmark {
+  font-family: var(--font-wordmark);
+  font-weight: 400;          /* Bebas Neue ships single weight */
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 0.9;
+  font-feature-settings: "kern" 1;
+}
+.gauss-wordmark.sm  { font-size: 16px; letter-spacing: 0.08em; }
+.gauss-wordmark.md  { font-size: 22px; }
+.gauss-wordmark.lg  { font-size: 32px; }
+.gauss-wordmark.xl  { font-size: 48px; }
+.gauss-wordmark.xxl { font-size: 88px; letter-spacing: 0.05em; }
+
+/* ============================================================
+   PROPOSAL — installation footprint map
+   Drop into the "Quem é a Gauss" section. Reinforces credibility
+   with the real install density map. Stats grounded in the
+   company intro (+2.800 sistemas · +60 cidades · +9 anos).
+   ============================================================ */
+.footprint {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 32px;
+  margin-top: 32px;
+  align-items: stretch;
+}
+.footprint .fp-map {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-hairline);
+  background: var(--gauss-green-100);
+  min-height: 340px;
+}
+.footprint .fp-map img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 58% 42%;
+  display: block;
+}
+.footprint .fp-map .fp-badge {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(7,16,10,0.82);
+  backdrop-filter: blur(6px);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.9);
+}
+.footprint .fp-map .fp-badge .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--gauss-green);
+  box-shadow: 0 0 0 4px rgba(57,181,74,0.3);
+}
+.footprint .fp-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+.footprint .fp-side .fp-eb {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gauss-green-700);
+}
+.footprint .fp-side h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+  margin: 0;
+  color: var(--ink-900);
+}
+.footprint .fp-side p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--fg-2);
+  margin: 0;
+  max-width: 460px;
+}
+.footprint .fp-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+.footprint .fp-stats .s {
+  padding: 18px 16px;
+  background: var(--ink-50);
+  border-radius: 12px;
+  border-left: 3px solid var(--gauss-green);
+}
+.footprint .fp-stats .s .v {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--gauss-green-900);
+}
+.footprint .fp-stats .s .u {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+@media (max-width: 720px) {
+  .footprint { grid-template-columns: 1fr; }
+}

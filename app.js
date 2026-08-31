@@ -11,7 +11,7 @@ class FlowchartApp {
     this.currentUser = null;
     this.selectedNode = null;
     this.selectedConnection = null;
-    this.mode = 'select'; // select, process, decision, start, connect
+    this.mode = 'select';
     this.connectingFrom = null;
     this.isDragging = false;
     this.isPanning = false;
@@ -27,6 +27,7 @@ class FlowchartApp {
     this.connectionsLayer = document.getElementById('connectionsLayer');
     this.cursorsLayer = document.getElementById('cursorsLayer');
     this.canvasContainer = document.getElementById('canvasContainer');
+    this.actionsPanel = document.getElementById('actionsPanel');
     
     // Color palette for users
     this.userColors = [
@@ -56,7 +57,6 @@ class FlowchartApp {
     const userNameInput = document.getElementById('userName');
     const logoutBtn = document.getElementById('logoutBtn');
     
-    // Check if user already logged in
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       this.currentUser = JSON.parse(savedUser);
@@ -121,10 +121,9 @@ class FlowchartApp {
   }
   
   // ============================================================
-  // COLLABORATION (via BroadcastChannel & LocalStorage)
+  // COLLABORATION
   // ============================================================
   setupCollaboration() {
-    // BroadcastChannel for same-origin real-time sync
     this.channel = new BroadcastChannel('gauss_flowchart');
     
     this.channel.onmessage = (event) => {
@@ -149,7 +148,6 @@ class FlowchartApp {
       }
     };
     
-    // Track mouse for cursor sharing
     this.canvasContainer.addEventListener('mousemove', (e) => {
       if (!this.currentUser) return;
       
@@ -165,7 +163,6 @@ class FlowchartApp {
       });
     });
     
-    // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
       this.removePresence();
     });
@@ -177,7 +174,6 @@ class FlowchartApp {
       data: this.currentUser
     });
     
-    // Keep alive every 30s
     this.presenceInterval = setInterval(() => {
       this.channel.postMessage({
         type: 'presence',
@@ -217,7 +213,6 @@ class FlowchartApp {
       this.cursorsLayer.appendChild(cursor);
     }
     
-    // Transform to canvas coordinates
     const rect = this.canvasContainer.getBoundingClientRect();
     const x = (data.x - rect.left - this.transform.x) / this.transform.scale;
     const y = (data.y - rect.top - this.transform.y) / this.transform.scale;
@@ -242,7 +237,6 @@ class FlowchartApp {
   }
   
   handleRemoteChange(data) {
-    // Avoid feedback loop
     if (data.userId === this.currentUser.id) return;
     
     this.nodes = data.nodes;
@@ -275,13 +269,14 @@ class FlowchartApp {
     this.svg.addEventListener('click', (e) => this.handleClick(e));
     this.svg.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
     
-    // Context menu
-    this.svg.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
-    document.addEventListener('click', () => this.hideContextMenu());
+    // Actions panel
+    document.getElementById('closePanelBtn').addEventListener('click', () => {
+      this.hideActionsPanel();
+    });
     
-    document.querySelectorAll('.context-item').forEach(item => {
-      item.addEventListener('click', () => {
-        this.handleContextAction(item.dataset.action);
+    document.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.handlePanelAction(btn.dataset.action);
       });
     });
     
@@ -304,7 +299,6 @@ class FlowchartApp {
   
   setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-      // Prevent shortcuts when typing
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       
       const isMod = e.ctrlKey || e.metaKey;
@@ -354,6 +348,12 @@ class FlowchartApp {
             this.undo();
           }
           break;
+        case 'escape':
+          this.hideActionsPanel();
+          this.selectedNode = null;
+          this.selectedConnection = null;
+          this.render();
+          break;
       }
     });
     
@@ -369,7 +369,7 @@ class FlowchartApp {
   // MOUSE INTERACTIONS
   // ============================================================
   handleMouseDown(e) {
-    if (e.button !== 0) return; // Left click only
+    if (e.button !== 0) return;
     
     const point = this.getMousePosition(e);
     const clickedNode = this.getNodeAtPoint(point);
@@ -386,6 +386,7 @@ class FlowchartApp {
         x: point.x - clickedNode.x,
         y: point.y - clickedNode.y
       };
+      this.showActionsPanel();
       this.render();
     } else if (this.mode === 'connect' && clickedNode) {
       if (!this.connectingFrom) {
@@ -433,6 +434,7 @@ class FlowchartApp {
       if (!clickedNode) {
         this.selectedNode = null;
         this.selectedConnection = null;
+        this.hideActionsPanel();
         this.render();
       }
     }
@@ -447,15 +449,56 @@ class FlowchartApp {
     }
   }
   
-  handleContextMenu(e) {
-    e.preventDefault();
-    const point = this.getMousePosition(e);
-    const clickedNode = this.getNodeAtPoint(point);
+  // ============================================================
+  // ACTIONS PANEL
+  // ============================================================
+  showActionsPanel() {
+    if (!this.selectedNode) return;
     
-    if (clickedNode) {
-      this.selectedNode = clickedNode;
-      this.showContextMenu(e.clientX, e.clientY);
-      this.render();
+    this.actionsPanel.style.display = 'block';
+    
+    // Update collapse button text
+    const collapseText = document.getElementById('collapseText');
+    const descendants = this.getAllDescendants(this.selectedNode);
+    
+    if (descendants.length > 0) {
+      const isCollapsed = this.selectedNode.collapsed;
+      collapseText.textContent = isCollapsed 
+        ? `Expandir (${descendants.length} itens)` 
+        : `Colapsar (${descendants.length} itens)`;
+      document.getElementById('collapseBtn').style.display = 'flex';
+    } else {
+      document.getElementById('collapseBtn').style.display = 'none';
+    }
+  }
+  
+  hideActionsPanel() {
+    this.actionsPanel.style.display = 'none';
+  }
+  
+  handlePanelAction(action) {
+    if (!this.selectedNode) return;
+    
+    switch(action) {
+      case 'edit':
+        this.editNodeText(this.selectedNode);
+        break;
+      case 'add-after':
+        this.addNodeAfter(this.selectedNode);
+        break;
+      case 'add-before':
+        this.addNodeBefore(this.selectedNode);
+        break;
+      case 'collapse':
+        this.toggleNodeCollapse(this.selectedNode);
+        break;
+      case 'change-color':
+        this.changeNodeColor(this.selectedNode);
+        break;
+      case 'delete':
+        this.deleteSelected();
+        this.hideActionsPanel();
+        break;
     }
   }
   
@@ -472,8 +515,7 @@ class FlowchartApp {
       height: type === 'start' ? 60 : 80,
       text: `Novo ${type === 'process' ? 'Processo' : type === 'decision' ? 'Decisão' : 'Início'}`,
       color: this.getNodeColor(type),
-      collapsed: false,
-      children: []
+      collapsed: false
     };
     
     this.nodes.push(node);
@@ -481,8 +523,8 @@ class FlowchartApp {
     this.addToHistory();
     this.render();
     this.broadcastChange();
+    this.showActionsPanel();
     
-    // Auto-edit
     setTimeout(() => this.editNodeText(node), 100);
   }
   
@@ -496,7 +538,6 @@ class FlowchartApp {
   }
   
   createConnection(from, to, label = '') {
-    // Avoid duplicate
     const exists = this.connections.find(c => 
       c.from === from.id && c.to === to.id
     );
@@ -517,6 +558,7 @@ class FlowchartApp {
   
   deleteSelected() {
     if (this.selectedNode) {
+      // Delete node and all its connections
       this.nodes = this.nodes.filter(n => n.id !== this.selectedNode.id);
       this.connections = this.connections.filter(c => 
         c.from !== this.selectedNode.id && c.to !== this.selectedNode.id
@@ -563,51 +605,50 @@ class FlowchartApp {
     });
   }
   
+  // ============================================================
+  // COLLAPSE/EXPAND WITH DESCENDANTS
+  // ============================================================
+  getAllDescendants(node) {
+    const descendants = [];
+    const visited = new Set();
+    
+    const traverse = (currentNode) => {
+      const children = this.connections
+        .filter(c => c.from === currentNode.id)
+        .map(c => this.nodes.find(n => n.id === c.to))
+        .filter(n => n && !visited.has(n.id));
+      
+      children.forEach(child => {
+        visited.add(child.id);
+        descendants.push(child);
+        traverse(child);
+      });
+    };
+    
+    traverse(node);
+    return descendants;
+  }
+  
   toggleNodeCollapse(node) {
     node.collapsed = !node.collapsed;
+    this.showActionsPanel(); // Update button text
     this.render();
     this.broadcastChange();
   }
   
-  // ============================================================
-  // CONTEXT MENU
-  // ============================================================
-  showContextMenu(x, y) {
-    const menu = document.getElementById('contextMenu');
-    menu.style.display = 'block';
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
-  }
-  
-  hideContextMenu() {
-    document.getElementById('contextMenu').style.display = 'none';
-  }
-  
-  handleContextAction(action) {
-    this.hideContextMenu();
+  isNodeVisible(node) {
+    // Check if any ancestor is collapsed
+    const parents = this.connections
+      .filter(c => c.to === node.id)
+      .map(c => this.nodes.find(n => n.id === c.from))
+      .filter(n => n);
     
-    if (!this.selectedNode) return;
-    
-    switch(action) {
-      case 'edit':
-        this.editNodeText(this.selectedNode);
-        break;
-      case 'add-after':
-        this.addNodeAfter(this.selectedNode);
-        break;
-      case 'add-before':
-        this.addNodeBefore(this.selectedNode);
-        break;
-      case 'collapse':
-        this.toggleNodeCollapse(this.selectedNode);
-        break;
-      case 'change-color':
-        this.changeNodeColor(this.selectedNode);
-        break;
-      case 'delete':
-        this.deleteSelected();
-        break;
+    for (let parent of parents) {
+      if (parent.collapsed) return false;
+      if (!this.isNodeVisible(parent)) return false;
     }
+    
+    return true;
   }
   
   addNodeAfter(node) {
@@ -620,13 +661,13 @@ class FlowchartApp {
       height: 80,
       text: 'Novo Processo',
       color: '#FFFFFF',
-      collapsed: false,
-      children: []
+      collapsed: false
     };
     
     this.nodes.push(newNode);
     this.createConnection(node, newNode);
     this.selectedNode = newNode;
+    this.showActionsPanel();
     this.editNodeText(newNode);
   }
   
@@ -640,13 +681,13 @@ class FlowchartApp {
       height: 80,
       text: 'Novo Processo',
       color: '#FFFFFF',
-      collapsed: false,
-      children: []
+      collapsed: false
     };
     
     this.nodes.push(newNode);
     this.createConnection(newNode, node);
     this.selectedNode = newNode;
+    this.showActionsPanel();
     this.editNodeText(newNode);
   }
   
@@ -671,6 +712,9 @@ class FlowchartApp {
     this.nodesLayer.innerHTML = '';
     
     this.nodes.forEach(node => {
+      // Skip if not visible (ancestor is collapsed)
+      if (!this.isNodeVisible(node)) return;
+      
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.classList.add('flowchart-node');
       g.dataset.nodeId = node.id;
@@ -691,7 +735,7 @@ class FlowchartApp {
       
       g.innerHTML = shape;
       
-      // Text (word wrap)
+      // Text
       const text = this.createWrappedText(node.text, node.width - 20);
       const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       textEl.classList.add('node-text');
@@ -699,14 +743,17 @@ class FlowchartApp {
       textEl.innerHTML = text;
       g.appendChild(textEl);
       
-      // Collapse button
-      if (node.children && node.children.length > 0) {
+      // Collapse indicator
+      const descendants = this.getAllDescendants(node);
+      if (descendants.length > 0) {
         const collapseBtn = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         collapseBtn.classList.add('node-collapse-btn');
         collapseBtn.innerHTML = `
-          <circle cx="${node.width/2 - 12}" cy="${-node.height/2 + 12}" r="8" fill="var(--gauss-green)" />
+          <circle cx="${node.width/2 - 12}" cy="${-node.height/2 + 12}" r="10" 
+                  fill="${node.collapsed ? 'var(--gauss-green)' : 'var(--ink-600)'}" 
+                  stroke="white" stroke-width="2"/>
           <text x="${node.width/2 - 12}" y="${-node.height/2 + 16}" 
-                text-anchor="middle" fill="white" font-size="12" font-weight="bold">
+                text-anchor="middle" fill="white" font-size="14" font-weight="bold">
             ${node.collapsed ? '+' : '−'}
           </text>
         `;
@@ -716,6 +763,20 @@ class FlowchartApp {
           this.toggleNodeCollapse(node);
         });
         g.appendChild(collapseBtn);
+        
+        // Badge showing count
+        if (node.collapsed) {
+          const badge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          badge.innerHTML = `
+            <rect x="${node.width/2 - 30}" y="${node.height/2 - 10}" width="28" height="16" 
+                  rx="8" fill="var(--gauss-green)"/>
+            <text x="${node.width/2 - 16}" y="${node.height/2 - 2}" 
+                  text-anchor="middle" fill="white" font-size="10" font-weight="600">
+              ${descendants.length}
+            </text>
+          `;
+          g.appendChild(badge);
+        }
       }
       
       this.nodesLayer.appendChild(g);
@@ -730,13 +791,14 @@ class FlowchartApp {
       const toNode = this.nodes.find(n => n.id === conn.to);
       
       if (!fromNode || !toNode) return;
-      if (fromNode.collapsed || toNode.collapsed) return;
+      
+      // Hide connection if either node is not visible
+      if (!this.isNodeVisible(fromNode) || !this.isNodeVisible(toNode)) return;
       
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.classList.add('connection-line');
       if (this.selectedConnection?.id === conn.id) path.classList.add('selected');
       
-      // Calculate path (simple right-angle)
       const x1 = fromNode.x;
       const y1 = fromNode.y + fromNode.height/2;
       const x2 = toNode.x;
@@ -751,12 +813,12 @@ class FlowchartApp {
         e.stopPropagation();
         this.selectedConnection = conn;
         this.selectedNode = null;
+        this.hideActionsPanel();
         this.render();
       });
       
       this.connectionsLayer.appendChild(path);
       
-      // Label
       if (conn.label) {
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.classList.add('connection-label');
@@ -776,7 +838,6 @@ class FlowchartApp {
     
     words.forEach(word => {
       const testLine = currentLine ? `${currentLine} ${word}` : word;
-      // Rough estimate: 7px per char
       if (testLine.length * 7 > maxWidth && currentLine) {
         lines.push(currentLine);
         currentLine = word;
@@ -799,14 +860,6 @@ class FlowchartApp {
   // TRANSFORM & ZOOM
   // ============================================================
   applyTransform() {
-    const layer = this.svg.querySelector('g');
-    if (layer) {
-      layer.setAttribute('transform', 
-        `translate(${this.transform.x}, ${this.transform.y}) scale(${this.transform.scale})`
-      );
-    }
-    
-    // Actually apply to both layers
     this.nodesLayer.setAttribute('transform', 
       `translate(${this.transform.x}, ${this.transform.y}) scale(${this.transform.scale})`
     );
@@ -835,12 +888,13 @@ class FlowchartApp {
   }
   
   fitToView() {
-    if (this.nodes.length === 0) return;
+    const visibleNodes = this.nodes.filter(n => this.isNodeVisible(n));
+    if (visibleNodes.length === 0) return;
     
     const padding = 50;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     
-    this.nodes.forEach(node => {
+    visibleNodes.forEach(node => {
       minX = Math.min(minX, node.x - node.width/2);
       minY = Math.min(minY, node.y - node.height/2);
       maxX = Math.max(maxX, node.x + node.width/2);
@@ -874,6 +928,7 @@ class FlowchartApp {
   
   getNodeAtPoint(point) {
     return this.nodes.find(node => {
+      if (!this.isNodeVisible(node)) return false;
       const dx = Math.abs(point.x - node.x);
       const dy = Math.abs(point.y - node.y);
       return dx < node.width/2 && dy < node.height/2;
@@ -932,24 +987,27 @@ class FlowchartApp {
       this.transform = data.transform || { x: 0, y: 0, scale: 1 };
       this.applyTransform();
     } else {
-      // Demo data
       this.createDemoFlowchart();
     }
   }
   
   createDemoFlowchart() {
-    const n1 = { id: 'demo1', type: 'start', x: 400, y: 100, width: 160, height: 60, text: 'Início - Pós-Venda', color: '#E6F5EA', collapsed: false, children: [] };
-    const n2 = { id: 'demo2', type: 'process', x: 400, y: 220, width: 180, height: 80, text: 'Receber solicitação', color: '#FFFFFF', collapsed: false, children: [] };
-    const n3 = { id: 'demo3', type: 'decision', x: 400, y: 360, width: 140, height: 80, text: 'Urgente?', color: '#FFF9E6', collapsed: false, children: [] };
-    const n4 = { id: 'demo4', type: 'process', x: 240, y: 480, width: 160, height: 80, text: 'Fila normal', color: '#FFFFFF', collapsed: false, children: [] };
-    const n5 = { id: 'demo5', type: 'process', x: 560, y: 480, width: 160, height: 80, text: 'Priorizar', color: '#FFE6E6', collapsed: false, children: [] };
+    const n1 = { id: 'demo1', type: 'start', x: 400, y: 100, width: 160, height: 60, text: 'Início - Pós-Venda', color: '#E6F5EA', collapsed: false };
+    const n2 = { id: 'demo2', type: 'process', x: 400, y: 220, width: 180, height: 80, text: 'Receber solicitação', color: '#FFFFFF', collapsed: false };
+    const n3 = { id: 'demo3', type: 'decision', x: 400, y: 360, width: 140, height: 80, text: 'Urgente?', color: '#FFF9E6', collapsed: false };
+    const n4 = { id: 'demo4', type: 'process', x: 240, y: 480, width: 160, height: 80, text: 'Fila normal', color: '#FFFFFF', collapsed: false };
+    const n5 = { id: 'demo5', type: 'process', x: 560, y: 480, width: 160, height: 80, text: 'Priorizar', color: '#FFE6E6', collapsed: false };
+    const n6 = { id: 'demo6', type: 'process', x: 240, y: 600, width: 160, height: 80, text: 'Análise técnica', color: '#FFFFFF', collapsed: false };
+    const n7 = { id: 'demo7', type: 'process', x: 560, y: 600, width: 160, height: 80, text: 'Atendimento imediato', color: '#FFFFFF', collapsed: false };
     
-    this.nodes = [n1, n2, n3, n4, n5];
+    this.nodes = [n1, n2, n3, n4, n5, n6, n7];
     this.connections = [
       { id: 'c1', from: 'demo1', to: 'demo2', label: '' },
       { id: 'c2', from: 'demo2', to: 'demo3', label: '' },
       { id: 'c3', from: 'demo3', to: 'demo4', label: 'Não' },
-      { id: 'c4', from: 'demo3', to: 'demo5', label: 'Sim' }
+      { id: 'c4', from: 'demo3', to: 'demo5', label: 'Sim' },
+      { id: 'c5', from: 'demo4', to: 'demo6', label: '' },
+      { id: 'c6', from: 'demo5', to: 'demo7', label: '' }
     ];
     
     this.saveToStorage();
@@ -958,12 +1016,9 @@ class FlowchartApp {
   startAutoSave() {
     setInterval(() => {
       this.saveToStorage();
-    }, 30000); // Save every 30s
+    }, 30000);
   }
   
-  // ============================================================
-  // HISTORY (Undo/Redo)
-  // ============================================================
   addToHistory() {
     const state = {
       nodes: JSON.parse(JSON.stringify(this.nodes)),
@@ -974,7 +1029,6 @@ class FlowchartApp {
     this.history.push(state);
     this.historyIndex++;
     
-    // Limit history
     if (this.history.length > 50) {
       this.history.shift();
       this.historyIndex--;
@@ -992,9 +1046,6 @@ class FlowchartApp {
     }
   }
   
-  // ============================================================
-  // MINIMAP
-  // ============================================================
   updateMinimap() {
     const canvas = document.getElementById('minimapCanvas');
     const ctx = canvas.getContext('2d');
@@ -1005,11 +1056,11 @@ class FlowchartApp {
     ctx.fillStyle = '#F8FAF8';
     ctx.fillRect(0, 0, w, h);
     
-    if (this.nodes.length === 0) return;
+    const visibleNodes = this.nodes.filter(n => this.isNodeVisible(n));
+    if (visibleNodes.length === 0) return;
     
-    // Calculate bounds
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    this.nodes.forEach(node => {
+    visibleNodes.forEach(node => {
       minX = Math.min(minX, node.x - node.width/2);
       minY = Math.min(minY, node.y - node.height/2);
       maxX = Math.max(maxX, node.x + node.width/2);
@@ -1022,8 +1073,7 @@ class FlowchartApp {
     const offsetX = (w - width * scale) / 2;
     const offsetY = (h - height * scale) / 2;
     
-    // Draw nodes
-    this.nodes.forEach(node => {
+    visibleNodes.forEach(node => {
       const x = (node.x - minX) * scale + offsetX;
       const y = (node.y - minY) * scale + offsetY;
       const nw = node.width * scale;
@@ -1033,13 +1083,12 @@ class FlowchartApp {
       ctx.fillRect(x - nw/2, y - nh/2, nw, nh);
     });
     
-    // Draw connections
     ctx.strokeStyle = '#6B736E';
     ctx.lineWidth = 1;
     this.connections.forEach(conn => {
       const from = this.nodes.find(n => n.id === conn.from);
       const to = this.nodes.find(n => n.id === conn.to);
-      if (!from || !to) return;
+      if (!from || !to || !this.isNodeVisible(from) || !this.isNodeVisible(to)) return;
       
       const x1 = (from.x - minX) * scale + offsetX;
       const y1 = (from.y - minY) * scale + offsetY;
@@ -1054,7 +1103,6 @@ class FlowchartApp {
   }
   
   showNotification(message) {
-    // Simple toast notification
     const toast = document.createElement('div');
     toast.style.cssText = `
       position: fixed;
@@ -1082,7 +1130,4 @@ class FlowchartApp {
   }
 }
 
-// ============================================================
-// INITIALIZE APP
-// ============================================================
 const app = new FlowchartApp();
